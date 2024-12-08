@@ -1,0 +1,5 @@
+global.c:11:6:blinky	8	static
+global.c:14:6:blinkyled1	8	static
+global.c:17:6:blinkyled2	8	static
+global.c:20:6:blinkyled3	8	static
+global.c:23:6:blinkyled4	8	static

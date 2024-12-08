@@ -2,51 +2,17 @@
 #include "usart.h"
 
 UART_HandleTypeDef huart1;
+ADC_HandleTypeDef hadc1;
 
-
-
-void uartReport(void) {
-	char str[40];
-	HAL_UART_Transmit(&huart1, (void*)str, sprintf(str, "!Time: %lu - Task: %lu\r\n#", HAL_GetTick(), numTask), 100);
-}
-
-void uartRedCount(void) {
-	const uint8_t str1[20] = "!MODE: 2#\r\n";
-	char str2[20];
-	HAL_UART_Transmit(&huart1, str1, strlen((const char *)str1), 100);
-	HAL_UART_Transmit(&huart1, (void*)str2, sprintf(str2, "!7SEG: %02d#\r\n", temp_count[0]), 100);
-}
-
-void uartGreenCount(void) {
-	const uint8_t str1[20] = "!MODE: 4#\r\n";
-	char str2[20];
-	HAL_UART_Transmit(&huart1, str1, strlen((const char *)str1), 100);
-	HAL_UART_Transmit(&huart1, (void*)str2, sprintf(str2, "!7SEG: %02d#\r\n", temp_count[2]), 100);
-}
-
-void uartYellowCount(void) {
-	const uint8_t str1[20] = "!MODE: 3#\r\n";
-	char str2[20];
-	HAL_UART_Transmit(&huart1, str1, strlen((const char *)str1), 100);
-	HAL_UART_Transmit(&huart1, (void*)str2, sprintf(str2, "!7SEG: %02d#\r\n", temp_count[1]), 100);
-}
-
-void uartCounter(void) {
-	char str1[20];
-	char str2[20];
-	HAL_UART_Transmit(&huart1, (void*)str1, sprintf(str1, "!7SEG: %02d#\r\n", led_count[0]), 100);
-	HAL_UART_Transmit(&huart1, (void*)str2, sprintf(str2, "!7SEG: %02d#\r\n", led_count[1]), 100);
-}
 void uartBegin(void){
 	const uint8_t str1[20] = "!BEGIN USART#\r\n";
-	const uint8_t str2[20] = "!MODE: 1#\r\n";
 	HAL_UART_Transmit(&huart1, str1, strlen((const char *)str1), 100);
-	HAL_UART_Transmit(&huart1, str2, strlen((const char *)str2), 100);
 }
 
 ////////////// COMMAND PARSER /////////////////////
 #define COMMAND_RST "!RST#"
 #define COMMAND_OK "!OK#"
+#define TIMEOUT_PERIOD 3000
 uint8_t temp = 0;
 uint8_t buffer[MAX_BUFFER_SIZE];
 uint8_t index_buffer = 0;
@@ -54,10 +20,9 @@ uint8_t buffer_flag = 0;
 uint32_t ADC_value = 0;
 uint8_t command_flag = 0;
 char command_data[MAX_BUFFER_SIZE];
-//ADC_value = HAL_ADC_GetValue(& hadc1);
-//HAL_UART_Transmit(& huart1, (void *) str, sprintf (str, "%d\n", ADC_value ), 1000);
-//HAL_Delay(500);
-void HAL_UART_RxCpltCallback ( UART_HandleTypeDef * huart ){
+uint32_t last_response_time = 0;
+
+void HAL_UART_RxCpltCallback (UART_HandleTypeDef * huart){
 	if(huart -> Instance == USART1 ){
 //		HAL_UART_Transmit (& huart1 , &temp , 1, 50);
 		buffer[index_buffer++] = temp;
@@ -65,10 +30,10 @@ void HAL_UART_RxCpltCallback ( UART_HandleTypeDef * huart ){
 			index_buffer = 0;
 		}
 		buffer_flag = 1;
-		HAL_UART_Receive_IT (& huart1 , &temp , 1);
+		HAL_UART_Receive_IT (& huart1, &temp, 1);
+		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 	}
 }
-
 
 void command_parser_fsm(){
     // Check if the buffer contains a command
@@ -80,6 +45,9 @@ void command_parser_fsm(){
             // Reset buffer after handling command
             memset(buffer, 0, MAX_BUFFER_SIZE);
             index_buffer = 0;
+
+            ADC_value = HAL_ADC_GetValue(& hadc1); // Function to get the ADC value
+            last_response_time = HAL_GetTick();
             return;
         }
 
@@ -90,6 +58,8 @@ void command_parser_fsm(){
             // Reset buffer after handling command
             memset(buffer, 0, MAX_BUFFER_SIZE);
             index_buffer = 0;
+
+            last_response_time = 0;
             return;
         }
 
@@ -101,15 +71,23 @@ void command_parser_fsm(){
 void uart_communication_fsm(){
     if(command_flag == 1){
         // Handle RST command
-        uint16_t ADC_value = HAL_ADC_GetValue(& hadc1);
+
         char response[20];
-        HAL_UART_Transmit(&huart1, (void *)response, sprintf (response, "!ADC=%d#\r\n", ADC_value), 100);
+        HAL_UART_Transmit(&huart1, (void *)response, sprintf (response, "!ADC=%lu#\r\n", ADC_value), 100);
         command_flag = 0;
     }
     else if(command_flag == 2){
         // Handle OK command
         // End communication or perform cleanup
         command_flag = 0;
+        return;
+    }
+
+    if(HAL_GetTick() - last_response_time > TIMEOUT_PERIOD && last_response_time != 0){
+            // Timeout occurred, resend the last ADC response
+            char response[20];
+            HAL_UART_Transmit(&huart1, (void *)response, sprintf (response, "!ADC=%lu#\r\n", ADC_value), 100);
+            last_response_time = HAL_GetTick(); // Reset the last response time
     }
 }
 

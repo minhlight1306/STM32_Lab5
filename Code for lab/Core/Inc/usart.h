@@ -5,17 +5,10 @@
 #include "global.h"
 
 #define MAX_BUFFER_SIZE 30
-extern UART_HandleTypeDef huart1;
-extern uint8_t temp;
-extern uint8_t index_buffer;
 extern uint8_t buffer_flag;
 
-void uartReport(void);
-void uartRedCount(void);
-void uartGreenCount(void);
-void uartYellowCount(void);
-void uartCounter(void);
 void uartBegin(void);
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 void command_parser_fsm();
 void uart_communication_fsm();
 

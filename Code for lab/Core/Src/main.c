@@ -62,9 +62,8 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t temp = 0;
-
-
+uint8_t start_temp = 0;
+void HAL_UART_RxCpltCallback (UART_HandleTypeDef * huart);
 /* USER CODE END 0 */
 
 /**
@@ -100,6 +99,7 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT (& htim2 );
+  HAL_UART_Receive_IT(&huart1, &start_temp, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -107,11 +107,14 @@ int main(void)
 
   while (1)
   {
-	  if (buffer_flag == 1) {
+	  if (buffer_flag == 1){
 		  command_parser_fsm();
+		  uartBegin();
 		  buffer_flag = 0;
 	  }
 	  uart_communication_fsm();
+//	  HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
+//	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
