@@ -9,10 +9,11 @@
 #define INC_GLOBAL_H_
 
 #define INIT		0
-
+#define TICK 		10
 
 #include "main.h"
 #include "usart.h"
+#include "software_timer.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>

@@ -1,4 +1,4 @@
-usart.c:7:6:uartBegin	40	static
-usart.c:25:6:HAL_UART_RxCpltCallback	16	static
-usart.c:38:6:command_parser_fsm	8	static
-usart.c:71:6:uart_communication_fsm	48	static
+usart.c:6:6:uartBegin	40	static
+usart.c:29:6:HAL_UART_RxCpltCallback	16	static
+usart.c:42:6:command_parser_fsm	16	static
+usart.c:84:6:uart_communication_fsm	48	static
